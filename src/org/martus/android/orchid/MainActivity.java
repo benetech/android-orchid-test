@@ -6,9 +6,11 @@ import org.apache.xmlrpc.client.XmlRpcClient;
 import org.apache.xmlrpc.client.XmlRpcClientConfigImpl;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.TextView;
 import com.subgraph.orchid.TorClient;
 import com.subgraph.orchid.TorInitializationListener;
@@ -36,9 +38,7 @@ public class MainActivity extends Activity
 		tor = new TorClient();
 
 		tor.getConfig().setDataDirectory(this.getCacheDir());
-		final AsyncTask<TorClient, Object, String> initializeTask = new InitializeTask();
-		Log.i(APP_LABEL, "about to start initialization");
-		initializeTask.execute(tor);
+
 	}
 
 	private void onInitialized()  {
@@ -46,25 +46,58 @@ public class MainActivity extends Activity
 		testTor();
 	}
 
-	private void testTor() {
-		try {
-			XmlRpcClient client = new XmlRpcClient();
-			XmlRpcClientConfigImpl config = new XmlRpcClientConfigImpl();
-			client.setConfig(config);
+	private void onTestCompleted(String result)
+	{
+		screenText.setText(result);
+	}
 
-			// Note: There is also a three argument constructor available which allows passing an SSLContext instance
-			//       that you have previously configured with a customized trust manager.
-			//
-			//    JTorXmlRpcTransportFactory(XmlRpcClient client, TorClient torClient, SSLContext sslContext)
+	private void testTor()
+	{
+		Log.i(APP_LABEL, "about to test Tor");
+		final AsyncTask<TorClient, Object, String> testTask = new TestTorTask();
+		testTask.execute(tor);
+	}
 
-			client.setTransportFactory(new OrchidXmlRpcTransportFactory(client,tor));
+	public void initOrchid(View view) {
+		final AsyncTask<TorClient, Object, String> initializeTask = new InitializeTask();
+		Log.i(APP_LABEL, "about to start initialization");
+		initializeTask.execute(tor);
+    }
 
-			// Just some random xmlrpc service on the internet that accepts unauthenticated requests
-			config.setServerURL(new URL("http://xmlrpc.texy.info/"));
-			Log.i(APP_LABEL, "Result from texy1.version is "+ client.execute("texy1.version", new Object[0]));
-		} catch (Exception e) {
-			e.printStackTrace();
+	private class TestTorTask extends AsyncTask<TorClient, Object, String>
+	{
+		protected String doInBackground(TorClient... clients)
+		{
+			final TorClient torClient = clients[0];
+
+			try
+			{
+				XmlRpcClient client = new XmlRpcClient();
+				XmlRpcClientConfigImpl config = new XmlRpcClientConfigImpl();
+				client.setConfig(config);
+
+				// Note: There is also a three argument constructor available which allows passing an SSLContext instance
+				//       that you have previously configured with a customized trust manager.
+				//
+				//    JTorXmlRpcTransportFactory(XmlRpcClient client, TorClient torClient, SSLContext sslContext)
+
+				client.setTransportFactory(new OrchidXmlRpcTransportFactory(client,torClient));
+
+				// Just some random xmlrpc service on the internet that accepts unauthenticated requests
+				config.setServerURL(new URL("http://xmlrpc.texy.info/"));
+				Log.i(APP_LABEL, "Result from texy1.version is "+ client.execute("texy1.version", new Object[0]));
+				return (String)client.execute("texy1.version", new Object[0]);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			return "failure";
 		}
+
+		@Override
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+	        onTestCompleted(result);
+        }
 	}
 
 	private class InitializeTask extends AsyncTask<TorClient, Object, String> implements  TorInitializationListener

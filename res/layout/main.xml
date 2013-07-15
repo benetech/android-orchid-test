@@ -9,5 +9,16 @@
     android:layout_height="wrap_content" 
     android:text="Hello World, MainActivity"
     android:id="@+id/mainText"/>
+
+    <Button
+        	android:id="@+id/createScreen"
+           	android:layout_width="wrap_content"
+          	android:layout_height="wrap_content"
+            android:onClick="initOrchid"
+          	android:text="Initialize Orchid"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="40dip"
+            android:layout_marginBottom="40dip"/>
+
 </LinearLayout>
 
